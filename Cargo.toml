@@ -1,0 +1,21 @@
+[package]
+name = "scarb-eject"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.68"
+
+authors = ["Software Mansion <contact@swmansion.com>"]
+description = "Create cairo_project.toml for a given Scarb package."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/software-mansion-labs/scarb-eject"
+
+[dependencies]
+anyhow = "1.0.70"
+cairo-lang-project = "1.0.0-alpha.7"
+clap = { version = "4.2.4", features = ["derive"] }
+scarb-metadata = "1.1.0"
+toml = "0.7.3"
+
+[profile.release]
+lto = true
