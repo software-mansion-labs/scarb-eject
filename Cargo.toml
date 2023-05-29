@@ -1,8 +1,8 @@
 [package]
 name = "scarb-eject"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
-rust-version = "1.68"
+rust-version = "1.69"
 
 authors = ["Software Mansion <contact@swmansion.com>"]
 description = "Create cairo_project.toml for a given Scarb package."
