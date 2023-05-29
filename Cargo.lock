@@ -593,6 +593,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26ba10c59bd4ebde82de954e3a3d6d503eb17bd634106ef144af1356b28b8f0f"
 dependencies = [
  "camino",
+ "clap",
  "semver",
  "serde",
  "serde_json",

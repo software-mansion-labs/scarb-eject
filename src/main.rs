@@ -1,10 +1,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use cairo_lang_project::ProjectConfigContent;
 use clap::Parser;
-use scarb_metadata::{Metadata, PackageId};
+use scarb_metadata::packages_filter::PackagesFilter;
 
 #[derive(Parser, Clone, Debug)]
 #[command(about, author, version)]
@@ -19,41 +19,6 @@ struct Args {
     packages_filter: PackagesFilter,
 }
 
-#[derive(Parser, Clone, Debug)]
-struct PackagesFilter {
-    /// Specify package to eject.
-    #[arg(short, long, value_name = "SPEC")]
-    package: Option<String>,
-}
-
-impl PackagesFilter {
-    fn match_one(&self, metadata: &Metadata) -> Result<PackageId> {
-        match &self.package {
-            Some(name) => {
-                let package = metadata
-                    .packages
-                    .iter()
-                    .find(|pkg| pkg.name == *name)
-                    .ok_or_else(|| anyhow!("package `{name}` not found in workspace"))?;
-
-                if !metadata.workspace.members.contains(&package.id) {
-                    bail!("package `{name}` is not a member of this workspace");
-                }
-
-                Ok(package.id.clone())
-            }
-            None => {
-                let members = &metadata.workspace.members;
-                match members.len() {
-                    0 => bail!("workspace has no members"),
-                    1 => Ok(members[0].clone()),
-                    _ => bail!("workspace has multiple members, please specify package"),
-                }
-            }
-        }
-    }
-}
-
 fn main() -> Result<()> {
     let args: Args = Args::parse();
 
@@ -61,12 +26,12 @@ fn main() -> Result<()> {
         .inherit_stderr()
         .exec()?;
 
-    let main_package_id = args.packages_filter.match_one(&metadata)?;
+    let main_package = args.packages_filter.match_one(&metadata)?;
 
     let compilation_unit = metadata
         .compilation_units
         .iter()
-        .filter(|unit| unit.package == main_package_id)
+        .filter(|unit| unit.package == main_package.id)
         .min_by_key(|unit| match unit.target.name.as_str() {
             name @ "starknet-contract" => (0, name),
             name @ "lib" => (1, name),
@@ -75,7 +40,8 @@ fn main() -> Result<()> {
         .ok_or_else(|| {
             anyhow!(
                 "could not find a compilation unit suitable for ejection for \
-                package {main_package_id}"
+                package {}",
+                main_package.id
             )
         })?;
 
