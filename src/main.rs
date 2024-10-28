@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Result};
 use cairo_lang_project::ProjectConfigContent;
 use clap::Parser;
-use scarb_metadata::packages_filter::PackagesFilter;
+use scarb_ui::args::PackagesFilter;
 
 #[derive(Parser, Clone, Debug)]
 #[command(about, author, version)]
