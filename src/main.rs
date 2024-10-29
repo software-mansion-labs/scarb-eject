@@ -54,13 +54,6 @@ fn main() -> Result<()> {
             )
         })?;
 
-    let crate_roots = compilation_unit
-        .components
-        .iter()
-        .filter(|c| c.name != "core")
-        .map(|c| (c.name.clone().into(), c.source_root().into()))
-        .collect();
-
     let edition = scarb_package_edition(&Some(&main_package), main_package.name.as_str());
     let version = main_package.version.clone();
     let cfg_set = scarb_cfg_set_to_cairo(&compilation_unit.cfg, main_package.name.as_str());
@@ -92,6 +85,13 @@ fn main() -> Result<()> {
         dependencies,
         experimental_features,
     };
+
+    let crate_roots = compilation_unit
+        .components
+        .iter()
+        .filter(|c| c.name != "core")
+        .map(|c| (c.name.clone().into(), c.source_root().into()))
+        .collect();
 
     let crates_config = AllCratesConfig {
         global: crate_settings,
