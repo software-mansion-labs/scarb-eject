@@ -130,7 +130,7 @@ fn get_global_crate_settings(
     compilation_unit: &CompilationUnitMetadata,
     package: &PackageMetadata,
 ) -> CrateSettings {
-    let edition = get_edition(&Some(&package), package.name.as_str());
+    let edition = get_edition(&Some(package), package.name.as_str());
 
     let version = package.version.clone();
 
@@ -142,7 +142,7 @@ fn get_global_crate_settings(
         .filter(|c| c.name != CORELIB_CRATE_NAME)
         .map(|c| {
             (
-                c.name.clone().into(),
+                c.name.clone(),
                 DependencySettings {
                     discriminator: c.discriminator.clone().map(|d| d.into()),
                 },
@@ -150,7 +150,7 @@ fn get_global_crate_settings(
         })
         .collect();
 
-    let experimental_features = get_experimental_features(&Some(&package));
+    let experimental_features = get_experimental_features(&Some(package));
 
     CrateSettings {
         name: None,
