@@ -4,13 +4,15 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::utils::{
+    scarb_cfg_set_to_cairo, scarb_package_edition, scarb_package_experimental_features,
+};
 use anyhow::{anyhow, Result};
+use cairo_lang_filesystem::db::{CrateSettings, DependencySettings};
 use cairo_lang_project::{AllCratesConfig, ProjectConfigContent};
-use cairo_lang_filesystem::db::{CrateSettings, DependencySettings, Edition};
-use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use clap::Parser;
+use scarb_metadata::CompilationUnitComponentDependencyMetadata;
 use scarb_ui::args::PackagesFilter;
-use crate::utils::{scarb_cfg_set_to_cairo, scarb_package_edition, scarb_package_experimental_features};
 
 #[derive(Parser, Clone, Debug)]
 #[command(about, author, version)]
@@ -70,7 +72,7 @@ fn main() -> Result<()> {
                     c.name.clone().into(),
                     DependencySettings {
                         discriminator: c.discriminator.clone().map(|d| d.into()),
-                    }
+                    },
                 )
             })
             .collect()
@@ -93,9 +95,68 @@ fn main() -> Result<()> {
         .map(|c| (c.name.clone().into(), c.source_root().into()))
         .collect();
 
+    let override_map = compilation_unit
+        .components
+        .iter()
+        .filter(|c| c.name != "core")
+        .map(|component| {
+            let package = metadata
+                .packages
+                .iter()
+                .find(|package| package.id == component.package);
+            let edition = scarb_package_edition(&package, component.name.as_str());
+            let version = package.map(|p| p.version.clone());
+            let cfg_set = component
+                .cfg
+                .clone()
+                .and_then(|cfg| scarb_cfg_set_to_cairo(&cfg, component.name.as_str()));
+            let dependencies = component
+                .dependencies
+                .as_ref()
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|CompilationUnitComponentDependencyMetadata { id, .. }| {
+                    compilation_unit
+                        .components
+                        .iter()
+                        .filter(|component| component.name != "core")
+                        .find_map(|component| {
+                            component.id.as_ref().and_then(|component_id| {
+                                if component_id == id {
+                                    Some((
+                                        component.name.clone(),
+                                        DependencySettings {
+                                            discriminator: component
+                                                .discriminator
+                                                .clone()
+                                                .map(|d| d.into()),
+                                        },
+                                    ))
+                                } else {
+                                    None
+                                }
+                            })
+                        })
+                })
+                .collect();
+            let experimental_features = scarb_package_experimental_features(&package);
+
+            (
+                component.name.clone().into(),
+                CrateSettings {
+                    edition,
+                    version,
+                    cfg_set,
+                    dependencies,
+                    experimental_features,
+                },
+            )
+        })
+        .collect();
+
     let crates_config = AllCratesConfig {
         global: crate_settings,
-        override_map: OrderedHashMap::default(),
+        override_map,
     };
 
     let project_config = ProjectConfigContent {

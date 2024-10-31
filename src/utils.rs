@@ -1,7 +1,7 @@
 use anyhow::Context;
 use cairo_lang_filesystem::db::{Edition, ExperimentalFeaturesConfig};
 use scarb_metadata::PackageMetadata;
-use tracing::{debug, error, warn};
+use tracing::warn;
 
 /// Get the [`Edition`] from [`PackageMetadata`], or assume the default edition.
 pub fn scarb_package_edition(package: &Option<&PackageMetadata>, crate_name: &str) -> Edition {
