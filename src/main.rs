@@ -61,7 +61,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-pub fn get_project_config(
+fn get_project_config(
     metadata: &Metadata,
     main_package: &PackageMetadata,
 ) -> Result<ProjectConfigContent> {
@@ -91,9 +91,9 @@ pub fn get_project_config(
 }
 
 fn get_crate_roots(
-    compilation_unit_metadata: &CompilationUnitMetadata,
+    compilation_unit: &CompilationUnitMetadata,
 ) -> OrderedHashMap<CrateIdentifier, PathBuf> {
-    compilation_unit_metadata
+    compilation_unit
         .components
         .iter()
         .filter(|c| c.name != CORELIB_CRATE_NAME)
@@ -107,7 +107,6 @@ fn get_crates_config(
     main_package: &PackageMetadata,
 ) -> AllCratesConfig {
     let global_crate_settings = get_global_crate_settings(compilation_unit, main_package);
-
     let override_map = compilation_unit
         .components
         .iter()
@@ -131,11 +130,8 @@ fn get_global_crate_settings(
     package: &PackageMetadata,
 ) -> CrateSettings {
     let edition = get_edition(&Some(package), package.name.as_str());
-
     let version = package.version.clone();
-
-    let cfg_set = scarb_cfg_set_to_cairo(&compilation_unit.cfg, package.name.as_str());
-
+    let cfg_set = get_cairo_cfg_set(&compilation_unit.cfg, package.name.as_str());
     let dependencies = compilation_unit
         .components
         .iter()
@@ -144,13 +140,12 @@ fn get_global_crate_settings(
             (
                 c.name.clone(),
                 DependencySettings {
-                    discriminator: c.discriminator.clone().map(|d| d.into()),
+                    discriminator: c.discriminator.clone().map(Into::into),
                 },
             )
         })
         .collect();
-
-    let experimental_features = get_experimental_features(&Some(package));
+    let experimental_features = get_experimental_features(Some(package));
 
     CrateSettings {
         name: None,
@@ -164,50 +159,41 @@ fn get_global_crate_settings(
 
 fn get_crate_settings_for_component(
     component: &CompilationUnitComponentMetadata,
-    unit: &CompilationUnitMetadata,
+    compilation_unit: &CompilationUnitMetadata,
     metadata: &Metadata,
 ) -> CrateSettings {
     let package = metadata
         .packages
         .iter()
         .find(|package| package.id == component.package);
-
     let edition = get_edition(&package, component.name.as_str());
-
     let version = package.map(|p| p.version.clone());
-
     let cfg_set = component
         .cfg
-        .clone()
-        .and_then(|cfg| scarb_cfg_set_to_cairo(&cfg, component.name.as_str()));
-
+        .as_ref()
+        .and_then(|cfg| get_cairo_cfg_set(cfg, component.name.as_str()));
     let dependencies = component
         .dependencies
         .as_ref()
         .unwrap_or(&vec![])
         .iter()
         .filter_map(|CompilationUnitComponentDependencyMetadata { id, .. }| {
-            unit.components
+            compilation_unit
+                .components
                 .iter()
                 .filter(|c| c.name != CORELIB_CRATE_NAME)
-                .find_map(|c| {
-                    c.id.as_ref().and_then(|component_id| {
-                        if component_id == id {
-                            Some((
-                                c.name.clone(),
-                                DependencySettings {
-                                    discriminator: c.discriminator.clone().map(|d| d.into()),
-                                },
-                            ))
-                        } else {
-                            None
-                        }
-                    })
+                .find(|c| c.id.as_ref() == Some(id))
+                .map(|c| {
+                    (
+                        c.name.clone(),
+                        DependencySettings {
+                            discriminator: c.discriminator.clone().map(Into::into),
+                        },
+                    )
                 })
         })
         .collect();
-
-    let experimental_features = get_experimental_features(&package);
+    let experimental_features = get_experimental_features(package);
 
     CrateSettings {
         name: Some(component.name.clone().into()),
@@ -220,7 +206,7 @@ fn get_crate_settings_for_component(
 }
 
 /// Get the [`Edition`] from [`PackageMetadata`], or assume the default edition.
-pub fn get_edition(package: &Option<&PackageMetadata>, crate_name: &str) -> Edition {
+fn get_edition(package: &Option<&PackageMetadata>, crate_name: &str) -> Edition {
     package
         .and_then(|p| p.edition.clone())
         .and_then(|e| {
@@ -236,7 +222,7 @@ pub fn get_edition(package: &Option<&PackageMetadata>, crate_name: &str) -> Edit
 ///
 /// The conversion is done the same way as in Scarb (except no panicking):
 /// <https://github.com/software-mansion/scarb/blob/9fe97c8eb8620a1e2103e7f5251c5a9189e75716/scarb/src/ops/metadata.rs#L295-L302>
-pub fn scarb_cfg_set_to_cairo(cfg_set: &[scarb_metadata::Cfg], crate_name: &str) -> Option<CfgSet> {
+fn get_cairo_cfg_set(cfg_set: &[scarb_metadata::Cfg], crate_name: &str) -> Option<CfgSet> {
     serde_json::to_value(cfg_set)
         .and_then(serde_json::from_value)
         .with_context(|| {
@@ -249,10 +235,11 @@ pub fn scarb_cfg_set_to_cairo(cfg_set: &[scarb_metadata::Cfg], crate_name: &str)
 }
 
 /// Get [`ExperimentalFeaturesConfig`] from [`PackageMetadata`] fields.
-pub fn get_experimental_features(package: &Option<&PackageMetadata>) -> ExperimentalFeaturesConfig {
+fn get_experimental_features(package: Option<&PackageMetadata>) -> ExperimentalFeaturesConfig {
     let contains = |feature: &str| -> bool {
-        let Some(package) = package else { return false };
-        package.experimental_features.contains(&feature.into())
+        package
+            .map(|p| p.experimental_features.contains(&feature.into()))
+            .unwrap_or(false)
     };
 
     ExperimentalFeaturesConfig {
