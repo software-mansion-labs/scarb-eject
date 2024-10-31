@@ -3,7 +3,10 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_filesystem::cfg::CfgSet;
-use cairo_lang_filesystem::db::{CORELIB_CRATE_NAME, CrateIdentifier, CrateSettings, DependencySettings, Edition, ExperimentalFeaturesConfig};
+use cairo_lang_filesystem::db::{
+    CrateIdentifier, CrateSettings, DependencySettings, Edition, ExperimentalFeaturesConfig,
+    CORELIB_CRATE_NAME,
+};
 use cairo_lang_project::{AllCratesConfig, ProjectConfigContent};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use clap::Parser;
@@ -36,23 +39,7 @@ fn main() -> Result<()> {
 
     let main_package = args.packages_filter.match_one(&metadata)?;
 
-    let compilation_unit = metadata
-        .compilation_units
-        .iter()
-        .filter(|unit| unit.package == main_package.id)
-        .min_by_key(|unit| match unit.target.name.as_str() {
-            name @ "starknet-contract" => (0, name),
-            name @ "lib" => (1, name),
-            name => (2, name),
-        })
-        .ok_or_else(|| {
-            anyhow!(
-                "could not find a compilation unit suitable for ejection for package {}",
-                main_package.id
-            )
-        })?;
-
-    let project_config = get_project_config(&metadata, compilation_unit, &main_package);
+    let project_config = get_project_config(&metadata, &main_package)?;
 
     let mut cairo_project_toml = toml::to_string_pretty(&project_config)?;
     cairo_project_toml.push('\n');
@@ -76,16 +63,31 @@ fn main() -> Result<()> {
 
 pub fn get_project_config(
     metadata: &Metadata,
-    compilation_unit: &CompilationUnitMetadata,
     main_package: &PackageMetadata,
-) -> ProjectConfigContent {
+) -> Result<ProjectConfigContent> {
+    let compilation_unit = metadata
+        .compilation_units
+        .iter()
+        .filter(|unit| unit.package == main_package.id)
+        .min_by_key(|unit| match unit.target.name.as_str() {
+            name @ "starknet-contract" => (0, name),
+            name @ "lib" => (1, name),
+            name => (2, name),
+        })
+        .ok_or_else(|| {
+            anyhow!(
+                "could not find a compilation unit suitable for ejection for package {}",
+                main_package.id
+            )
+        })?;
+
     let crate_roots = get_crate_roots(compilation_unit);
     let crates_config = get_crates_config(metadata, compilation_unit, main_package);
 
-    ProjectConfigContent {
+    Ok(ProjectConfigContent {
         crate_roots,
         crates_config,
-    }
+    })
 }
 
 fn get_crate_roots(
