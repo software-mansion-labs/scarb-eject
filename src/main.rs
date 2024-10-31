@@ -106,7 +106,6 @@ fn get_crates_config(
     compilation_unit: &CompilationUnitMetadata,
     main_package: &PackageMetadata,
 ) -> AllCratesConfig {
-
     let global_crate_settings = get_global_crate_settings(compilation_unit, main_package);
 
     let override_map = compilation_unit
@@ -131,9 +130,12 @@ fn get_global_crate_settings(
     compilation_unit: &CompilationUnitMetadata,
     package: &PackageMetadata,
 ) -> CrateSettings {
-    let edition = scarb_package_edition(&Some(&package), package.name.as_str());
+    let edition = get_edition(&Some(&package), package.name.as_str());
+
     let version = package.version.clone();
+
     let cfg_set = scarb_cfg_set_to_cairo(&compilation_unit.cfg, package.name.as_str());
+
     let dependencies = compilation_unit
         .components
         .iter()
@@ -148,7 +150,7 @@ fn get_global_crate_settings(
         })
         .collect();
 
-    let experimental_features = scarb_package_experimental_features(&Some(&package));
+    let experimental_features = get_experimental_features(&Some(&package));
 
     CrateSettings {
         name: None,
@@ -169,12 +171,16 @@ fn get_crate_settings_for_component(
         .packages
         .iter()
         .find(|package| package.id == component.package);
-    let edition = scarb_package_edition(&package, component.name.as_str());
+
+    let edition = get_edition(&package, component.name.as_str());
+
     let version = package.map(|p| p.version.clone());
+
     let cfg_set = component
         .cfg
         .clone()
         .and_then(|cfg| scarb_cfg_set_to_cairo(&cfg, component.name.as_str()));
+
     let dependencies = component
         .dependencies
         .as_ref()
@@ -201,7 +207,7 @@ fn get_crate_settings_for_component(
         })
         .collect();
 
-    let experimental_features = scarb_package_experimental_features(&package);
+    let experimental_features = get_experimental_features(&package);
 
     CrateSettings {
         name: Some(component.name.clone().into()),
@@ -214,7 +220,7 @@ fn get_crate_settings_for_component(
 }
 
 /// Get the [`Edition`] from [`PackageMetadata`], or assume the default edition.
-pub fn scarb_package_edition(package: &Option<&PackageMetadata>, crate_name: &str) -> Edition {
+pub fn get_edition(package: &Option<&PackageMetadata>, crate_name: &str) -> Edition {
     package
         .and_then(|p| p.edition.clone())
         .and_then(|e| {
@@ -243,12 +249,10 @@ pub fn scarb_cfg_set_to_cairo(cfg_set: &[scarb_metadata::Cfg], crate_name: &str)
 }
 
 /// Get [`ExperimentalFeaturesConfig`] from [`PackageMetadata`] fields.
-pub fn scarb_package_experimental_features(
-    package: &Option<&PackageMetadata>,
-) -> ExperimentalFeaturesConfig {
+pub fn get_experimental_features(package: &Option<&PackageMetadata>) -> ExperimentalFeaturesConfig {
     let contains = |feature: &str| -> bool {
         let Some(package) = package else { return false };
-        package.experimental_features.iter().any(|f| f == feature)
+        package.experimental_features.contains(&feature.into())
     };
 
     ExperimentalFeaturesConfig {
