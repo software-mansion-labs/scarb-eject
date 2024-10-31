@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -21,9 +20,6 @@ struct Args {
 
     #[command(flatten)]
     packages_filter: PackagesFilter,
-
-    #[arg(long)]
-    no_deps: bool,
 }
 
 fn main() -> Result<()> {
@@ -56,23 +52,19 @@ fn main() -> Result<()> {
     let version = main_package.version.clone();
     let cfg_set = scarb_cfg_set_to_cairo(&compilation_unit.cfg, main_package.name.as_str());
 
-    let dependencies = if args.no_deps {
-        BTreeMap::new()
-    } else {
-        compilation_unit
-            .components
-            .iter()
-            .filter(|c| c.name != "core")
-            .map(|c| {
-                (
-                    c.name.clone().into(),
-                    DependencySettings {
-                        discriminator: c.discriminator.clone().map(|d| d.into()),
-                    },
-                )
-            })
-            .collect()
-    };
+    let dependencies = compilation_unit
+        .components
+        .iter()
+        .filter(|c| c.name != "core")
+        .map(|c| {
+            (
+                c.name.clone().into(),
+                DependencySettings {
+                    discriminator: c.discriminator.clone().map(|d| d.into()),
+                },
+            )
+        })
+        .collect();
 
     let experimental_features = scarb_package_experimental_features(&Some(&main_package));
 
