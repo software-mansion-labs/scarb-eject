@@ -3,9 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use cairo_lang_filesystem::cfg::CfgSet;
-use cairo_lang_filesystem::db::{
-    CrateIdentifier, CrateSettings, DependencySettings, Edition, ExperimentalFeaturesConfig,
-};
+use cairo_lang_filesystem::db::{CORELIB_CRATE_NAME, CrateIdentifier, CrateSettings, DependencySettings, Edition, ExperimentalFeaturesConfig};
 use cairo_lang_project::{AllCratesConfig, ProjectConfigContent};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use clap::Parser;
@@ -96,7 +94,7 @@ fn get_crate_roots(
     compilation_unit_metadata
         .components
         .iter()
-        .filter(|c| c.name != "core")
+        .filter(|c| c.name != CORELIB_CRATE_NAME)
         .map(|c| (c.name.clone().into(), c.source_root().into()))
         .collect()
 }
@@ -111,7 +109,7 @@ fn get_crates_config(
     let override_map = compilation_unit
         .components
         .iter()
-        .filter(|c| c.name != "core")
+        .filter(|c| c.name != CORELIB_CRATE_NAME)
         .map(|component| {
             (
                 component.name.clone().into(),
@@ -139,7 +137,7 @@ fn get_global_crate_settings(
     let dependencies = compilation_unit
         .components
         .iter()
-        .filter(|c| c.name != "core")
+        .filter(|c| c.name != CORELIB_CRATE_NAME)
         .map(|c| {
             (
                 c.name.clone().into(),
@@ -189,7 +187,7 @@ fn get_crate_settings_for_component(
         .filter_map(|CompilationUnitComponentDependencyMetadata { id, .. }| {
             unit.components
                 .iter()
-                .filter(|c| c.name != "core")
+                .filter(|c| c.name != CORELIB_CRATE_NAME)
                 .find_map(|c| {
                     c.id.as_ref().and_then(|component_id| {
                         if component_id == id {
