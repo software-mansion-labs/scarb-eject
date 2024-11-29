@@ -118,7 +118,11 @@ fn get_crates_config(
         .filter(|c| c.name != CORELIB_CRATE_NAME)
         .map(|component| {
             (
-                component.name.clone().into(),
+                component
+                    .id
+                    .clone()
+                    .unwrap_or(component.name.clone().into())
+                    .into(),
                 get_crate_settings_for_component(component, compilation_unit, metadata),
             )
         })
