@@ -97,7 +97,12 @@ fn get_crate_roots(
         .components
         .iter()
         .filter(|c| c.name != CORELIB_CRATE_NAME)
-        .map(|c| (c.name.clone().into(), c.source_root().into()))
+        .map(|c| {
+            (
+                c.id.clone().unwrap_or(c.name.clone().into()).into(),
+                c.source_root().into(),
+            )
+        })
         .collect()
 }
 
