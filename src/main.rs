@@ -244,6 +244,7 @@ fn get_experimental_features(package: Option<&PackageMetadata>) -> ExperimentalF
 
     ExperimentalFeaturesConfig {
         negative_impls: contains("negative_impls"),
+        associated_item_constraints: contains("associated_item_constraints"),
         coupons: contains("coupons"),
     }
 }

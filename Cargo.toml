@@ -11,9 +11,9 @@ repository = "https://github.com/software-mansion-labs/scarb-eject"
 
 [dependencies]
 anyhow = "1.0.71"
-cairo-lang-project = { git = "https://github.com/starkware-libs/cairo", rev = "cc5bd37096cc67d910509738908b6ac26b12f893" }
-cairo-lang-filesystem = { git = "https://github.com/starkware-libs/cairo", rev = "cc5bd37096cc67d910509738908b6ac26b12f893" }
-cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo", rev = "cc5bd37096cc67d910509738908b6ac26b12f893" }
+cairo-lang-project = "2.9.1"
+cairo-lang-filesystem = "2.9.1"
+cairo-lang-utils = "2.9.1"
 clap = { version = "4.3.0", features = ["derive"] }
 scarb-metadata = "1.13.0"
 scarb-ui = "0.1.5"
